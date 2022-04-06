@@ -7,10 +7,10 @@
 4. ~~OrderDate~~
 5. Occupation
     - needs sequence
-6. Product
+6. ~~Product~~
     - needs sequence
     - dependency on subcategory
-7. SalesManagers -- in progress
+7. ~~SalesManagers~~
     - needs sequence
 8. Customer
     - needs sequence
@@ -31,7 +31,7 @@
 
 1. ~~TrackWorkFlow~~ 
 2. ~~Drop foreign keys from Fact.Data~~
-4. Add foreign keys
+4. ~~Add foreign keys~~
 3. ~~Truncate all tables~~ 
 
 
