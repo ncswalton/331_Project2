@@ -4,11 +4,10 @@
 -- Description:	Creates DBSecurity.UserAuthorization
 -- passed unit testing
 -- =============================================
-	drop procedure if exists [Project2].[CreateDBSecurityAuthorizationTable]
-		go
+	
 		drop procedure if exists [Project2].[CreateDBSecurityAuthorizationTable]
 		go
-			create procedure [Project2].[CreateDBSecurityAuthorizationTable] @UserAuthorizationKey int
+			create procedure [Project2].[CreateDBSecurityAuthorizationTable] @GroupMemberUserAuthorizationKey int
 			as
 		begin
 	-- Create Sequence Object for UserAuthorization Table
@@ -44,7 +43,7 @@
 			@StartTime = @start,
 			@EndTime = @end,
 			@WorkFlowDescription = 'Creating Db.SecurityAuthorization',
-			@UserAuthorizationkey = @UserAuthorizationkey
+			@UserAuthorizationkey = @GroupMemberUserAuthorizationkey
 
 	end
 GO
