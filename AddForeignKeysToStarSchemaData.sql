@@ -8,7 +8,7 @@ drop procedure if exists Project2.AddForeignKeysToStarSchemaData
 go
 create PROCEDURE [Project2].[AddForeignKeysToStarSchemaData]
 
-    @UserAuthorizationKey int
+    @GroupMemberUserAuthorizationKey int
 AS
    BEGIN
 declare @start datetime2,
@@ -73,6 +73,6 @@ exec [Process].[usp_TrackWorkFlow]
 	@StartTime = @start,
 	@EndTime = @end,
 	@WorkFlowDescription = 'Adding FKs to Fact.Data',
-	@UserAuthorizationKey = @UserAuthorizationKey
+	@UserAuthorizationKey = @GroupMemberUserAuthorizationKey
 
 END
