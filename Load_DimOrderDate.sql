@@ -36,10 +36,15 @@ set nocount on
 
 	Select @end = sysdatetime()
 
-	exec Process.usp_TrackWorkFlow
+	declare @rowcount as int
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimOrderDate]);
+
+	exec Process.usp_TrackWorkFlow 
+	@WorkFlowDescription = 'Loading OrderDate table',
+	@UserAuthorizationKey = @UserAuthorizationKey,
+	@WorkFlowStepTableRowCount=@rowcount,
 	@StartTime = @start,
-	@EndTime = @end,
-	@WorkFlowDescription = 'Loading DimOrderDate',
-	@UserAuthorizationkey = @UserAuthorizationkey
+	@EndTime = @end
 
 END
