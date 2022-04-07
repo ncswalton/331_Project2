@@ -59,11 +59,15 @@ set nocount on
 	on a.ProductSubcategory = b.ProductSubcategory) as x;
 
 	select @end = sysdatetime();
+	
+	declare @rowcount as int
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimProduct]);
 
-    exec Process.usp_TrackWorkFlow
+	exec Process.usp_TrackWorkFlow 
+	@WorkFlowDescription = 'Loading DimProduct table',
+	@UserAuthorizationKey = @UserAuthorizationKey,
+	@WorkFlowStepTableRowCount=@rowcount,
 	@StartTime = @start,
-    @EndTime = @end,
-    @WorkFlowDescription = 'Loading DimProduct table',
-    @userAuthorizationkey = @UserAuthorizationkey
-    
+	@EndTime = @end
 END
