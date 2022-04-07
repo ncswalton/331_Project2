@@ -30,7 +30,8 @@ set nocount on
     [ProductCode],
     [ProductName],
     [Color],
-    [ModelName]
+    [ModelName],
+	UserAuthorizationKey
     )
 
     select
@@ -41,7 +42,8 @@ set nocount on
     x.[ProductCode],
     x.[ProductName],
     x.[Color],
-    x.[ModelName]
+    x.[ModelName],
+	@UserAuthorizationKey
 
 
     from 

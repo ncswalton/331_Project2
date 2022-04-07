@@ -23,23 +23,23 @@ BEGIN
 	INCREMENT BY 1
 
 	INSERT INTO [CH01-01-Dimension].[DimCustomer]
-		(CustomerName, CustomerKey)
+		(CustomerName, CustomerKey, UserAuthorizationKey)
 	SELECT A.CustomerName,
-		NEXT VALUE for PkSequence.CustomerSequenceObject
+		NEXT VALUE for PkSequence.CustomerSequenceObject, @UserAuthorizationKey
 
 	FROM (SELECT DISTINCT CustomerName
 		FROM FileUpload.OriginallyLoadedData) as A
 
 	select @end = sysdatetime();
 
-	--declare @rowcount as int
-	--set @rowcount = (select count(*)
-	--from [CH01-01-Dimension].[DimCustomer]);
+	declare @rowcount as int
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimCustomer]);
 
 exec Process.usp_TrackWorkFlow 
 @WorkFlowDescription = 'Loading DimCustomer',
 @UserAuthorizationKey = @UserAuthorizationKey,
---@WorkFlowStepTableRowCount=@rowcount
+@WorkFlowStepTableRowCount=@rowcount,
 @StartTime = @start,
 @EndTime = @end
 
