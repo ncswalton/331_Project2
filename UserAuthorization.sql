@@ -43,7 +43,8 @@
 			@StartTime = @start,
 			@EndTime = @end,
 			@WorkFlowDescription = 'Creating Db.SecurityAuthorization',
-			@UserAuthorizationkey = @GroupMemberUserAuthorizationkey
+			@UserAuthorizationkey = @GroupMemberUserAuthorizationkey,
+			@WorkFlowStepTableRowCount = null
 
 	end
 GO
