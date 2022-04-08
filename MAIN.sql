@@ -1,7 +1,5 @@
 use BIClass
 go
-
-
 -- =============================================
 -- Author:		<Nick Walton>
 -- Create date: <2022-04-02>
@@ -37,7 +35,7 @@ BEGIN
 	@WorkFlowStepTableRowCount);
 END
 
-
+go
 --STEP 2: CREATE WORKFLOWSTEPS TABLE
 -- =============================================
 -- Author:		Nick Walton
@@ -45,7 +43,7 @@ END
 -- Description:	Creates Process.WorkFlowSteps table 
 -- passed unit testing
 -- =============================================
-go
+
 drop procedure if exists [Process].[CreateWorkFlowStepsTable]
 go
 create PROCEDURE [Process].[CreateWorkFlowStepsTable] @UserAuthorizationKey int
@@ -182,23 +180,8 @@ create procedure [Project2].[AddColumns] @UserAuthorizationKey INT
 
 end
 
---drop
---exec procedures in this order:
 
---Gender
---MaritalStatus
---ProductCategories
---ProductSubcategories
---SalesManager
---Occupation
---Territory
---Product
---OrderDate
---Customer
---Data
-
---drop
-
+go
 -- STEP 4: CREATE AUTHORIZATION TABLE
 -- =============================================
 -- Author:		Andrew Zheng
@@ -250,12 +233,6 @@ end
 			@WorkFlowStepTableRowCount = null
 
 	end
-GO
-
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
 GO
 
 -- =============================================
@@ -319,6 +296,7 @@ begin
 		@WorkFlowStepTableRowCount = @rowcount
 end;
 
+go
 drop procedure if exists [Project2].[CreateProductSubcategory];
 go
 create procedure [Project2].[CreateProductSubcategory] @UserAuthorizationKey INT
@@ -465,13 +443,13 @@ set nocount on
 	@EndTime = @end
 END
 
-
+go
 -- =============================================
 -- Author:		Nick Walton
 -- Create date: 2022-04-05
 -- Description:	Drop the Foreign Keys From the Star Schema
 -- =============================================
-go
+
 drop procedure if exists [Project2].[DropForeignKeysFromStarSchemaData]
 go
 create PROCEDURE [Project2].[DropForeignKeysFromStarSchemaData] @UserAuthorizationKey int
@@ -504,17 +482,16 @@ exec [Process].usp_TrackWorkFlow
 END;
 
 
-
+go
 -- =============================================
 -- Author:		Nick Walton
 -- Procedure:	[Project2].[TruncateTables]
 -- Create date: 2022-04-04
 -- Description:	Procedure to truncate table data before loading
 -- =============================================
+drop procedure if exists Project2.[TruncateStarSchemaData] 
 go
-drop procedure if exists Project2.[TruncateTables] 
-go
-create procedure Project2.[TruncateTables] @UserAuthorizationKey int 
+create procedure Project2.[TruncateStarSchemaData] @UserAuthorizationKey int 
 as
 begin
 
@@ -544,7 +521,6 @@ begin
 
 end
 go
-
 
 -- =============================================
 -- Author:		Nick Walton
@@ -608,7 +584,7 @@ begin
 			@EndTime = @end
 end
 
-
+go
 -- =============================================
 -- Author:		Andrew Zheng
 -- Create date: 4/3
@@ -616,7 +592,6 @@ end
 -- passed unit testing 04-06
 -- fixed small typo (Maurizo -> Maurizio)
 -- =============================================
-go
 drop procedure if exists [Project2].[Load_SalesManagers]
 go
 create PROCEDURE [Project2].[Load_SalesManagers] @UserAuthorizationKey int
@@ -670,21 +645,12 @@ exec Process.usp_TrackWorkFlow
 END
 GO
 
-USE [BIClass]
-GO
-/****** Object:  StoredProcedure [Project2].[Load_DimMaritalStatus]  ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =============================================
 -- Author: Manna Sebastian & Sophia Paul
 -- Create date: April 4, 2022
 -- Description:	Add the necessary information to the DimMaritalStatus table
 -- Passed unit testing 04-06. Took out sequence (not needed) 
 -- =============================================
-use BIClass
 
 DROP PROCEDURE IF EXISTS [Project2].[Load_DimMaritalStatus]
 GO
@@ -726,14 +692,13 @@ BEGIN
      @UserAuthorizationKey = @UserAuthorizationKey
 
 END
-
+go
 -- =============================================
 -- Author: Manna Sebastian
 -- Create date: April 4, 2022
 -- Description:	Add the necessary information to the DimGender table
 -- Passed unit testing 04-06. Removed unneeded sequence
 -- =============================================
-go
 DROP PROCEDURE IF EXISTS [Project2].[Load_DimGender]
 GO
 CREATE PROCEDURE [Project2].[Load_DimGender] @UserAuthorizationKey INT
@@ -774,7 +739,7 @@ BEGIN
      @UserAuthorizationKey = @UserAuthorizationKey
 END
 
-
+go
 -- =============================================
 -- Author:		Nick Walton
 -- Procedure:	[Project2].[LoadTerritory]
@@ -782,12 +747,9 @@ END
 -- Description:	Procedure to load DimTerritory
 -- Passed unit testing 04-06
 -- =============================================
-
+drop procedure if exists [Project2].[Load_DimTerritory]
 go
---DROPGO ADDED
-drop procedure if exists [Project2].[LoadTerritory]
-go
-	create procedure [Project2].[LoadTerritory] @UserAuthorizationKey int
+	create procedure [Project2].[Load_DimTerritory] @UserAuthorizationKey int
 as
 begin
 declare @start datetime2,
@@ -834,22 +796,60 @@ select @start = sysdatetime();
 		@WorkFlowStepTableRowCount = rowcount
 end;
 
-
+go
 -- =============================================
 -- Author:		Ivan Hossain
 -- Create date: 4/5
 -- Description:	Stored Procedure (DimCustomers)
 -- Passed unit testing 04-06
 -- =============================================
+drop procedure if exists [Project2].[Load_DimCustomer]
 go
+create PROCEDURE [Project2].[Load_DimCustomer] @UserAuthorizationKey int
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	DECLARE @start DATETIME2
+	DECLARE @end DATETIME2;
+	select @start=SYSDATETIME();
 
+	drop sequence if exists PkSequence.CustomerSequenceObject
+	CREATE SEQUENCE PkSequence.CustomerSequenceObject
+	as int start with 1
+	INCREMENT BY 1
 
+	INSERT INTO [CH01-01-Dimension].[DimCustomer]
+		(CustomerName, CustomerKey, UserAuthorizationKey)
+	SELECT A.CustomerName,
+		NEXT VALUE for PkSequence.CustomerSequenceObject, @UserAuthorizationKey
+
+	FROM (SELECT DISTINCT CustomerName
+		FROM FileUpload.OriginallyLoadedData) as A
+
+	select @end = sysdatetime();
+
+	declare @rowcount as int
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimCustomer]);
+
+exec Process.usp_TrackWorkFlow 
+@WorkFlowDescription = 'Loading DimCustomer',
+@UserAuthorizationKey = @UserAuthorizationKey,
+@WorkFlowStepTableRowCount=@rowcount,
+@StartTime = @start,
+@EndTime = @end
+
+END
+
+go
 -- =============================================
 -- Author:		Ivan Hossain
 -- Create date: 4/5
 -- Description:	Stored Procedure (DimOccupation)
 -- =============================================
-go
+
 drop procedure if exists [Project2].[Load_DimOccupation]
 go
 create PROCEDURE [Project2].[Load_DimOccupation] @UserAuthorizationKey int
@@ -876,7 +876,7 @@ BEGIN
 
 	declare @rowcount as int 
 	set @rowcount = (select count(*)
-	from [CH01-01-Dimension].[DimCustomer]);
+	from [CH01-01-Dimension].[DimOccupation]);
 
 
 exec Process.usp_TrackWorkFlow 
@@ -888,15 +888,17 @@ exec Process.usp_TrackWorkFlow
 
 END
 
-
-
-
--- loads the data table
--- this is dependent on all the other tables being loaded prior
 go
-drop procedure if exists [Project2].[LoadData];
+
+-- =============================================
+-- Author:		Nick Walton
+-- Procedure:	[Project2].[Load_Data]
+-- Create date: 2022-04-04
+-- Description:	Loads Fact.Data
+-- =============================================
+drop procedure if exists [Project2].[Load_Data];
 go
-create procedure [Project2].[LoadData] @UserAuthorizationKey int
+create procedure [Project2].[Load_Data] @UserAuthorizationKey int
 AS
 BEGIN
 
