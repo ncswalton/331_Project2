@@ -8,7 +8,7 @@
 go
 drop procedure if exists [Project2].[Load_SalesManagers]
 go
-create PROCEDURE [Project2].[Load_SalesManagers] @UserAuthorizationKey int
+create PROCEDURE [Project2].[Load_SalesManagers] @GroupMemberUserAuthorizationKey int
     
 AS
 BEGIN
@@ -18,6 +18,7 @@ BEGIN
     DECLARE @start DATETIME2
     DECLARE @end DATETIME2;
     select @start=SYSDATETIME();
+    DROP SEQUENCE IF EXISTS PkSequence.SalesManagerSequenceObject
     create SEQUENCE PkSequence.SalesManagerSequenceObject
     as int start with 1
     increment by 1
@@ -50,7 +51,7 @@ BEGIN
 	from [CH01-01-Dimension].[SalesManagers]);
 exec Process.usp_TrackWorkFlow 
 @WorkFlowDescription = 'Loading SalesManagers table',
-@UserAuthorizationKey = @UserAuthorizationKey,
+@UserAuthorizationKey = @GroupMemberUserAuthorizationKey,
 @WorkFlowStepTableRowCount=@rowcount,
 @StartTime = @start,
 @EndTime = @end
