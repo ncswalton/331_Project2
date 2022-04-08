@@ -1,22 +1,6 @@
 use BIClass
 go
---STEP 1: CREATE WORKFLOW SEQ
-drop procedure if exists [Process].[WorkFlowSeq];
-go
-create PROCEDURE [Process].[WorkFlowSeq]
-AS
-BEGIN
-	drop sequence if exists process.workflowseqctr;
 
-	create sequence process.workflowseqctr
-	as int
-	start with 1
-	increment by 1;
-END
-go
-
-USE [BIClass]
-GO
 
 -- =============================================
 -- Author:		<Nick Walton>
@@ -262,55 +246,12 @@ end
 			@StartTime = @start,
 			@EndTime = @end,
 			@WorkFlowDescription = 'Creating Db.SecurityAuthorization',
-			@UserAuthorizationkey = @UserAuthorizationkey
+			@UserAuthorizationkey = @UserAuthorizationkey,
+			@WorkFlowStepTableRowCount = null
 
 	end
 GO
--- =============================================
--- Author:		Joel Joseph
--- Create date: 2022-04-03
--- Description:	Loads DimOrderDate
--- passed unit testing 04-06
--- =============================================
-drop procedure if exists [Project2].[Load_DimOrderDate]
-go
-create PROCEDURE [Project2].[Load_DimOrderDate] @UserAuthorizationKey int with exec as owner
-AS
-BEGIN
 
-set nocount on
-	declare @start as datetime
-	declare @end as datetime
-	
-	select @start = SYSDATETIME();
-	
-	truncate table [CH01-01-Dimension].[DimOrderDate]
-	insert into [CH01-01-Dimension].[DimOrderDate]
-	(
-	Orderdate,
-	MonthName,
-	MonthNumber,
-	Year,
-	UserAuthorizationKey
-	)
-
-	select distinct
-	a.OrderDate,
-	a.MonthName,
-	a.MonthNumber,
-	a.Year,
-	@UserAuthorizationKey
-	from FileUpload.OriginallyLoadedData As a 
-
-	Select @end = sysdatetime()
-
-	exec Process.usp_TrackWorkFlow
-	@StartTime = @start,
-	@EndTime = @end,
-	@WorkFlowDescription = 'Loading DimOrderDate',
-	@UserAuthorizationkey = @UserAuthorizationkey
-
-END
 
 SET ANSI_NULLS ON
 GO
@@ -331,7 +272,8 @@ as
 begin
 
 	declare @start datetime2,
-			@end datetime2
+			@end datetime2,
+			@rowcount int
 	select @start = sysdatetime();
 
 	drop sequence if exists [PkSequence].[DimProductCategorySequenceObject]
@@ -344,48 +286,47 @@ begin
 	create table [CH01-01-Dimension].[DimProductCategory]
 	(
 	[ProductCategoryKey] int not null primary key,
-	[ProductCategory] varchar(20) not null
+	[ProductCategory] varchar(20) not null,
+	UserAuthorizationKey int not null default(-1),
+	DateAdded datetime2 null default(sysdatetime()),
+	DateOfLastUpdate datetime2 null default(sysdatetime())
 	)
 
 
 	insert into [CH01-01-Dimension].[DimProductCategory]
 	(
 	ProductCategoryKey,
-	ProductCategory
+	ProductCategory,
+	UserAuthorizationKey
 	)
 	select
 		next value for [PkSequence].[DimProductCategorySequenceObject],
-		fu.ProductCategory
+		fu.ProductCategory,
+		@UserAuthorizationKey
 	from
 		(select distinct ProductCategory
 		from FileUpload.OriginallyLoadedData) as fu
 
 	select @end = sysdatetime();
 
+	select @rowcount = count(*) from [CH01-01-Dimension].DimProductCategory
+
 	exec [Process].usp_TrackWorkFlow 
 		@StartTime = @start,
 		@EndTime = @end,
 		@WorkFlowDescription = 'Created [DimProductCategory] table',
-		@UserAuthorizationKey = @UserAuthorizationKey
+		@UserAuthorizationKey = @UserAuthorizationKey,
+		@WorkFlowStepTableRowCount = @rowcount
 end;
 
--- =============================================
--- Author:		Nick Walton
--- Procedure:	[Project2].[CreateProductCategory]
--- Create date: 2022-04-04
--- Description:	Creates the ProductSubcategory table
--- Passed unit testing 04-06
--- =============================================
-
-
-go
 drop procedure if exists [Project2].[CreateProductSubcategory];
 go
 create procedure [Project2].[CreateProductSubcategory] @UserAuthorizationKey INT
 as
 begin
 	declare @start datetime2,
-			@end datetime2
+			@end datetime2,
+			@rowcount int
 	select @start = sysdatetime();
 	
 	drop sequence if exists [PkSequence].[DimProductSubategorySequenceObject]
@@ -403,7 +344,11 @@ begin
         constraint FK_DimProductCategory
             foreign key (ProductCategoryKey)
             references [CH01-01-Dimension].[DimProductCategory] (ProductCategoryKey),
-        ProductSubcategory varchar(20) null
+        ProductSubcategory varchar(20) null,
+		UserAuthorizationKey int not null default(-1),
+		DateAdded datetime2 null default(sysdatetime()),
+		DateOfLastUpdate datetime2 null default(sysdatetime())
+
     );
 
 
@@ -413,11 +358,13 @@ begin
     (
         [ProductSubcategoryKey],
         [ProductCategoryKey],
-        [ProductSubcategory]
+        [ProductSubcategory],
+		UserAuthorizationKey
     )
     select next value for [PkSequence].[DimProductSubcategorySequenceObject],
            query.ProductCategoryKey,
-           query.ProductSubcategory
+           query.ProductSubcategory,
+		   @UserAuthorizationKey
     from
     (
 	select distinct fu.ProductCategory, fu.ProductSubcategory, pc.ProductCategoryKey
@@ -428,11 +375,14 @@ begin
 
     select @end = sysdatetime();
 
+	select @rowcount = count(*) from [CH01-01-Dimension].DimProductSubcategory
+
     exec [Process].[usp_TrackWorkFlow] 
 		@StartTime = @start,
 		@EndTime = @end,
 		@WorkFlowDescription = 'Create/load ProductSubcategory table',
-		@UserAuthorizationKey = @UserAuthorizationKey;
+		@UserAuthorizationKey = @UserAuthorizationKey,
+		@WorkFlowStepTableRowCount = @rowcount
 		                                   
 END;
 GO
@@ -471,7 +421,8 @@ set nocount on
     [ProductCode],
     [ProductName],
     [Color],
-    [ModelName]
+    [ModelName],
+	UserAuthorizationKey
     )
 
     select
@@ -482,7 +433,8 @@ set nocount on
     x.[ProductCode],
     x.[ProductName],
     x.[Color],
-    x.[ModelName]
+    x.[ModelName],
+	@UserAuthorizationKey
 
 
     from 
@@ -500,16 +452,19 @@ set nocount on
 	on a.ProductSubcategory = b.ProductSubcategory) as x;
 
 	select @end = sysdatetime();
+	
+	declare @rowcount as int
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimProduct]);
 
-    exec Process.usp_TrackWorkFlow
+	exec Process.usp_TrackWorkFlow 
+	@WorkFlowDescription = 'Loading DimProduct table',
+	@UserAuthorizationKey = @UserAuthorizationKey,
+	@WorkFlowStepTableRowCount=@rowcount,
 	@StartTime = @start,
-    @EndTime = @end,
-    @WorkFlowDescription = 'Loading DimProduct table',
-    @userAuthorizationkey = @UserAuthorizationkey
-    
+	@EndTime = @end
 END
 
---TODO: product table procedure
 
 -- =============================================
 -- Author:		Nick Walton
@@ -543,7 +498,8 @@ exec [Process].usp_TrackWorkFlow
 	@StartTime = @start, 
 	@EndTime = @end, 
 	@WorkFlowDescription = 'Dropped FKs from Fact.Data table',
-	@UserAuthorizationKey = @UserAuthorizationKey;
+	@UserAuthorizationKey = @UserAuthorizationKey,
+	@WorkFlowStepTableRowCount = null
 
 END;
 
@@ -583,7 +539,8 @@ begin
 		@StartTime = @start, 
 		@EndTime = @end, 
 		@WorkFlowDescription = 'Truncating tables',
-		@UserAuthorizationKey = @UserAuthorizationKey;
+		@UserAuthorizationKey = @UserAuthorizationKey,
+		@WorkFlowStepTableRowCount = null
 
 end
 go
@@ -643,6 +600,12 @@ begin
 	alter table [CH01-01-Fact].[Data]
 		add [SalesKey] int not null primary key default(-1)
 
+		exec Process.usp_TrackWorkFlow 
+			@WorkFlowDescription = 'Loading SalesManagers table',
+			@UserAuthorizationKey = @UserAuthorizationKey,
+			@WorkFlowStepTableRowCount=null,
+			@StartTime = @start,
+			@EndTime = @end
 end
 
 
@@ -672,7 +635,7 @@ BEGIN
     INSERT INTO [CH01-01-Dimension].[SalesManagers]
         
     
-        (SalesManager, Category, Office,SalesManagerKey)
+        (SalesManager, Category, Office,SalesManagerKey,UserAuthorizationKey)
     SELECT SalesManager, ProductsubCategory, Office=case
 
         when SalesManager LIKE N'Maurizio%' 
@@ -684,7 +647,7 @@ BEGIN
         'Seattle'
         
         END,
-    next VALUE for PkSequence.SalesManagerSequenceObject
+    next VALUE for PkSequence.SalesManagerSequenceObject, @UserAuthorizationKey
     
     from (Select distinct SalesManager,ProductSubCategory FROM FileUpload.OriginallyLoadedData)
     As A
@@ -696,6 +659,7 @@ BEGIN
 	declare @rowcount as int
 	set @rowcount = (select count(*)
 	from [CH01-01-Dimension].[SalesManagers]);
+
 exec Process.usp_TrackWorkFlow 
 @WorkFlowDescription = 'Loading SalesManagers table',
 @UserAuthorizationKey = @UserAuthorizationKey,
@@ -722,9 +686,9 @@ GO
 -- =============================================
 use BIClass
 
-drop procedure if exists [Project2].[Load_DimMaritalStatus]
-go
-create PROCEDURE [Project2].[Load_DimMaritalStatus] @UserAuthorizationKey INT
+DROP PROCEDURE IF EXISTS [Project2].[Load_DimMaritalStatus]
+GO
+CREATE PROCEDURE [Project2].[Load_DimMaritalStatus] @UserAuthorizationKey INT
 AS
 BEGIN
 
@@ -734,7 +698,7 @@ BEGIN
 
     SELECT @start = SYSDATETIME();
 
-	INSERT INTO [CH01-01-Dimension].DimMaritalStatus (MaritalStatus, MaritalStatusDescription)
+	INSERT INTO [CH01-01-Dimension].DimMaritalStatus (MaritalStatus, MaritalStatusDescription, UserAuthorizationKey)
 
     SELECT MaritalStatus,
     MaritalStatusDescription = CASE
@@ -742,22 +706,26 @@ BEGIN
             'Married'
         ELSE 
             'Single'
-    END
-    from 
+    END, @UserAuthorizationKey
+
+    FROM 
     (SELECT DISTINCT MaritalStatus FROM FileUpload.OriginallyLoadedData)
     AS A
 
 	SELECT @end = SYSDATETIME();
 
+    DECLARE @rowcount AS INT 
+    SET @rowcount = (SELECT count(*)
+    FROM [CH01-01-Dimension].[DimMaritalStatus]);
 
     EXEC [Process].[usp_TrackWorkFlow]
      @StartTime = @start,
      @EndTime = @end,
      @WorkFlowDescription = 'Load DimMaritalStatus',
+     @WorkFlowStepTableRowCount = @rowcount,
      @UserAuthorizationKey = @UserAuthorizationKey
 
 END
-
 
 -- =============================================
 -- Author: Manna Sebastian
@@ -766,9 +734,9 @@ END
 -- Passed unit testing 04-06. Removed unneeded sequence
 -- =============================================
 go
-drop procedure if exists [Project2].[Load_DimGender]
-go
-create PROCEDURE [Project2].[Load_DimGender] @UserAuthorizationKey INT
+DROP PROCEDURE IF EXISTS [Project2].[Load_DimGender]
+GO
+CREATE PROCEDURE [Project2].[Load_DimGender] @UserAuthorizationKey INT
 AS
 BEGIN
 
@@ -778,7 +746,7 @@ BEGIN
 
     SELECT @start = SYSDATETIME();
 
-	INSERT INTO [CH01-01-Dimension].DimGender (Gender, GenderDescription)
+	INSERT INTO [CH01-01-Dimension].DimGender (Gender, GenderDescription, UserAuthorizationKey)
 
     SELECT Gender,
     GenderDescription = CASE
@@ -786,21 +754,26 @@ BEGIN
         'Female'
     ELSE 
         'Male'
-    END
+    END, @UserAuthorizationKey
+    
     FROM
     (SELECT DISTINCT Gender FROM FileUpload.OriginallyLoadedData)
     As G
 
-
 	SELECT @end = SYSDATETIME();
 
+    DECLARE @rowcount AS INT 
+    SET @rowcount = (SELECT count(*)
+    FROM [CH01-01-Dimension].[DimGender]);
 
     EXEC [Process].[usp_TrackWorkFlow]
      @StartTime = @start,
      @EndTime = @end,
-     @WorkFlowDescription = 'Load DimGender',
+     @WorkFlowDescription = 'Load DimGender Table',
+     @WorkFlowStepTableRowCount = @rowcount,
      @UserAuthorizationKey = @UserAuthorizationKey
 END
+
 
 -- =============================================
 -- Author:		Nick Walton
@@ -818,7 +791,8 @@ go
 as
 begin
 declare @start datetime2,
-		@end datetime2
+		@end datetime2,
+		@rowcount int
 select @start = sysdatetime();
 
 	drop sequence if exists [Project2].[DimTerritorySequenceObject]
@@ -832,15 +806,15 @@ select @start = sysdatetime();
 	TerritoryKey,
 	TerritoryGroup,
 	TerritoryCountry,
-	TerritoryRegion
-	--UserAuthorizationKey
+	TerritoryRegion,
+	UserAuthorizationKey
 	)
 	select
 	next value for [Project2].[DimTerritorySequenceObject],
 	query.TerritoryGroup,
 	query.TerritoryCountry,
-	query.TerritoryRegion
-	---@UserAuthorizationKey
+	query.TerritoryRegion,
+	@UserAuthorizationKey
 	from
 	(
 	select distinct
@@ -850,12 +824,14 @@ select @start = sysdatetime();
 	from FileUpload.OriginallyLoadedData as fu) as query
 
 	select @end = sysdatetime();
+	select @rowcount = count(*) from [CH01-01-Dimension].DimTerritory
 
 	exec [Process].[usp_TrackWorkFlow]
 		@EndTime = @end,
 		@StartTime = @start,
 		@WorkFlowDescription = 'Loading DimTerritory',
-		@UserAuthorizationKey = @UserAuthorizationKey
+		@UserAuthorizationKey = @UserAuthorizationKey,
+		@WorkFlowStepTableRowCount = rowcount
 end;
 
 
@@ -866,45 +842,6 @@ end;
 -- Passed unit testing 04-06
 -- =============================================
 go
-drop procedure if exists [Project2].[Load_DimCustomer]
-go
-create PROCEDURE [Project2].[Load_DimCustomer] @UserAuthorizationKey int
-AS
-BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
-	SET NOCOUNT ON;
-	DECLARE @start DATETIME2
-	DECLARE @end DATETIME2;
-	select @start=SYSDATETIME();
-
-	drop sequence if exists PkSequence.CustomerSequenceObject
-	CREATE SEQUENCE PkSequence.CustomerSequenceObject
-	as int start with 1
-	INCREMENT BY 1
-
-	INSERT INTO [CH01-01-Dimension].[DimCustomer]
-		(CustomerName, CustomerKey)
-	SELECT A.CustomerName,
-		NEXT VALUE for PkSequence.CustomerSequenceObject
-
-	FROM (SELECT DISTINCT CustomerName
-		FROM FileUpload.OriginallyLoadedData) as A
-
-	select @end = sysdatetime();
-
-	--declare @rowcount as int
-	--set @rowcount = (select count(*)
-	--from [CH01-01-Dimension].[DimCustomer]);
-
-exec Process.usp_TrackWorkFlow 
-@WorkFlowDescription = 'Loading DimCustomer',
-@UserAuthorizationKey = @UserAuthorizationKey,
---@WorkFlowStepTableRowCount=@rowcount
-@StartTime = @start,
-@EndTime = @end
-
-END
 
 
 -- =============================================
@@ -918,8 +855,7 @@ go
 create PROCEDURE [Project2].[Load_DimOccupation] @UserAuthorizationKey int
 AS
 BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
+
 	SET NOCOUNT ON;
     DECLARE @start DATETIME2
     DECLARE @end DATETIME2;
@@ -931,26 +867,27 @@ BEGIN
 	INCREMENT BY 1
 
 	INSERT INTO [CH01-01-Dimension].[DimOccupation]
-        (Occupation, OccupationKey)
+        (Occupation, OccupationKey, UserAuthorizationKey)
     SELECT Occupation, 
-	NEXT VALUE for Project2.DimOccupationSequenceObject 
+	NEXT VALUE for Project2.DimOccupationSequenceObject, @UserAuthorizationKey
 	FROM (SELECT DISTINCT Occupation FROM FileUpload.OriginallyLoadedData) AS A
     
     select @end = sysdatetime();
 
-	--declare @rowcount as int 
-	--set @rowcount = (select count(*)
-	--from [CH01-01-Dimension].[DimCustomer]);
+	declare @rowcount as int 
+	set @rowcount = (select count(*)
+	from [CH01-01-Dimension].[DimCustomer]);
 
 
 exec Process.usp_TrackWorkFlow 
 @WorkFlowDescription = 'Loading DimOccupation',
 @UserAuthorizationKey = @UserAuthorizationKey,
---@WorkFlowStepTableRowCount=@rowcount
+@WorkFlowStepTableRowCount=@rowcount,
 @StartTime = @start,
 @EndTime = @end
 
 END
+
 
 
 
@@ -965,7 +902,8 @@ BEGIN
 
 	SET NOCOUNT ON;
 	declare @start datetime2,
-			@end datetime2;
+			@end datetime2,
+			@rowcount int
 	select @start = sysdatetime();
 
     drop sequence if exists [Project2].[DataSequenceObject];
@@ -1054,11 +992,12 @@ and fu.TerritoryCountry = dt.TerritoryCountry
 and fu.TerritoryGroup = dt.TerritoryGroup
 
 	select @end = sysdatetime();
-
+	select @rowcount = count(*) from [CH01-01-Fact].[Data]
     exec [Process].[usp_TrackWorkFlow]
 		@StartTime = @start,
 		@EndTime = @end,
 		@WorkFlowDescription = 'Loading Fact.Data table',
-		@UserAuthorizationKey = @UserAuthorizationKey
+		@UserAuthorizationKey = @UserAuthorizationKey, 
+		@WorkFlowStepTableRowCount = @rowcount
 		
 END;
