@@ -8,7 +8,7 @@ begin
 			@rowcount int
 	select @start = sysdatetime();
 	
-	drop sequence if exists [PkSequence].[DimProductSubategorySequenceObject]
+	drop sequence if exists [PkSequence].[DimProductSubcategorySequenceObject]
 	create sequence [PkSequence].[DimProductSubcategorySequenceObject]
 	as int
 	start with 1
