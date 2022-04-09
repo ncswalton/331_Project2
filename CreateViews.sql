@@ -7,12 +7,6 @@
 -- =============================================
 
 	
-
-
-
-declare @start datetime2
-declare @end datetime2;
-	
 	DROP VIEW IF EXISTS [Project2].[CreateCustomerView]
 	GO
 	CREATE VIEW [Project2].[CreateCustomerView]
@@ -33,7 +27,7 @@ declare @end datetime2;
         'Female'
     ELSE 
         'Male'
-    END, @UserAuthorizationKey
+    END
     
     FROM
     (SELECT DISTINCT Gender FROM FileUpload.OriginallyLoadedData)
@@ -51,7 +45,7 @@ declare @end datetime2;
             'Married'
         ELSE 
             'Single'
-    END, @UserAuthorizationKey
+    END
 
     FROM 
     (SELECT DISTINCT MaritalStatus FROM FileUpload.OriginallyLoadedData)
@@ -63,7 +57,7 @@ declare @end datetime2;
 		GO
 	CREATE VIEW [Project2].[CreateOccupationView]
 	AS
-	  SELECT Occupation, @UserAuthorizationKey
+	  SELECT Occupation
 	FROM (SELECT DISTINCT OccupatiON FROM FileUpload.OriginallyLoadedData) AS A
 	GO
 
@@ -75,8 +69,7 @@ declare @end datetime2;
 	a.OrderDate,
 	a.MonthName,
 	a.MonthNumber,
-	a.Year,
-	@UserAuthorizationKey AS UserAuthorizationKey
+	a.Year
 	FROM FileUpload.OriginallyLoadedData AS a 
 	GO
 
@@ -91,8 +84,7 @@ declare @end datetime2;
     x.[ProductCode],
     x.[ProductName],
     x.[Color],
-    x.[ModelName],
-	@UserAuthorizationKey
+    x.[ModelName]
 
 
     FROM 
@@ -117,8 +109,7 @@ declare @end datetime2;
 	SELECT
 	query.TerritoryGroup,
 	query.TerritoryCountry,
-	query.TerritoryRegion,
-	@UserAuthorizationKey
+	query.TerritoryRegion
 	FROM
 	(
 	SELECT DISTINCT
@@ -142,7 +133,7 @@ declare @end datetime2;
         Or SalesManager Like N'Luis%' THEN
         'Seattle'
         
-        END, @UserAuthorizationKey
+        END
     
     FROM (SELECT DISTINCT SalesManager,ProductSubCategory FROM FileUpload.OriginallyLoadedData) AS A;
 	GO
@@ -152,8 +143,7 @@ declare @end datetime2;
 	CREATE VIEW [Project2].[CreateCategoryView]
 	AS
 	SELECT
-		fu.ProductCategory,
-		@UserAuthorizationKey 
+		fu.ProductCategory
 	FROM
 		(SELECT DISTINCT ProductCategory
 		FROM FileUpload.OriginallyLoadedData) AS fu
@@ -163,8 +153,7 @@ declare @end datetime2;
 	GO
 	CREATE VIEW [Project2].[CreateSubcategoryView]
 	AS
-		SELECT query.ProductCategoryKey, query.ProductSubcategory,
-		   @UserAuthorizationKey
+		SELECT query.ProductCategoryKey, query.ProductSubcategory
     FROM
     (
 	SELECT DISTINCT fu.ProductCategory, fu.ProductSubcategory, pc.ProductCategoryKey
@@ -206,8 +195,7 @@ declare @end datetime2;
 	fu.Occupation,
 	fu.TerritoryRegion,
 	fu.TerritoryCountry,
-	fu.TerritoryGroup,
-	@UserAuthorizationKey
+	fu.TerritoryGroup
 FROM FileUpload.OriginallyLoadedData AS fu
 inner join [CH01-01-Dimension].SalesManagers AS sm
 ON fu.SalesManager = sm.SalesManager
