@@ -43,7 +43,7 @@ BEGIN
     EXEC  [Project2].[Load_DimProduct] @UserAuthorizationKey = 5;  -- Change -1 to the appropriate UserAuthorizationKey
     EXEC  [Project2].[Load_SalesManagers] @UserAuthorizationKey = 1;  -- Change -1 to the appropriate UserAuthorizationKey
     EXEC  [Project2].[Load_DimGender] @UserAuthorizationKey = 7;  -- Change -1 to the appropriate UserAuthorizationKey
-    EXEC  [Project2].[Load_DimMaritalStatus] @UserAuthorizationKey = 27;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimMaritalStatus] @UserAuthorizationKey = 2;  -- Change -1 to the appropriate UserAuthorizationKey
     EXEC  [Project2].[Load_DimOccupation] @UserAuthorizationKey = 3;  -- Change -1 to the appropriate UserAuthorizationKey
     EXEC  [Project2].[Load_DimOrderDate] @UserAuthorizationKey = 5;  -- Change -1 to the appropriate UserAuthorizationKey
     EXEC  [Project2].[Load_DimTerritory] @UserAuthorizationKey = 4;  -- Change -1 to the appropriate UserAuthorizationKey
