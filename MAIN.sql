@@ -1003,3 +1003,142 @@ and fu.TerritoryGroup = dt.TerritoryGroup
 		@WorkFlowStepTableRowCount = @rowcount
 		
 END;
+
+go
+drop procedure if exists [Project2].[LoadStarSchemaData]
+go
+create procedure [Project2].[LoadStarSchemaData]
+    -- Add the parameters for the stored procedure here
+AS
+BEGIN
+    SET NOCOUNT ON;
+	declare @start datetime2,
+			@end datetime2;
+	select @start = sysdatetime();
+
+	-- Must create these 2 tables before counting rows
+	EXEC  [Project2].[Load_DimProductCategory] @UserAuthorizationKey = 4;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimProductSubcategory] @UserAuthorizationKey = 4;  -- Change -1 to the appropriate UserAuthorizationKey
+
+	-- Get row counts for all tables
+	EXEC	[Project2].[ShowTableStatusRowCount]
+		@UserAuthorizationKey = 4,  -- Change -1 to the appropriate UserAuthorizationKey
+		@TableStatus = N'''Pre-truncate of tables'''
+    --
+    --	Drop FKs, truncate, create DBSecurity table, Replace PKs with sequence columns
+ 	--
+
+    EXEC  [Project2].[DropForeignKeysFromStarSchemaData] @UserAuthorizationKey = 4;
+	EXEC  [Project2].[TruncateStarSchemaData] @UserAuthorizationKey = 4;
+	--
+	exec Project2.CreateDBSecurityAuthorizationTable @UserAuthorizationKey = 1;
+	exec Project2.ReplacePKsWithSequenceColumns @UserAuthorizationKey = 4;
+    --
+    --	Always truncate the Star Schema Data
+    --
+
+    --
+    --	Load the star schema
+    --
+
+    EXEC  [Project2].[Load_DimProduct] @UserAuthorizationKey = 5;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_SalesManagers] @UserAuthorizationKey = 1;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimGender] @UserAuthorizationKey = 7;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimMaritalStatus] @UserAuthorizationKey = 2;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimOccupation] @UserAuthorizationKey = 3;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimOrderDate] @UserAuthorizationKey = 5;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimTerritory] @UserAuthorizationKey = 4;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_DimCustomer] @UserAuthorizationKey = 3;  -- Change -1 to the appropriate UserAuthorizationKey
+    EXEC  [Project2].[Load_Data] @UserAuthorizationKey = 4;  -- Change -1 to the appropriate UserAuthorizationKey
+  --
+    --	Recreate all of the foreign keys prior after loading the star schema
+    --
+ 	--
+	--	Check row count before truncation
+	EXEC	[Project2].[ShowTableStatusRowCount]
+		@UserAuthorizationKey = 4,  -- Change -1 to the appropriate UserAuthorizationKey
+		@TableStatus = N'''Row Count after loading the star schema'''
+	--
+   EXEC [Project2].[AddForeignKeysToStarSchemaData] @UserAuthorizationKey = 1;  -- Change -1 to the appropriate UserAuthorizationKey
+
+   select @end = sysdatetime();
+
+   	    exec [Process].[usp_TrackWorkFlow]
+			@StartTime = @start,
+			@EndTime = @end,
+			@WorkFlowDescription = 'Executing LoadStarSchemaData',
+			@UserAuthorizationKey = 0,
+			@WorkFlowStepTableRowCount = null
+
+    --
+END;
+
+
+GO
+drop procedure if exists [Project2].[ShowTableStatusRowCount] 
+go
+create procedure [Project2].[ShowTableStatusRowCount] 
+@UserAuthorizationKey int,
+@TableStatus VARCHAR(64)
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+	declare @start datetime2,
+			@end datetime2
+
+	select @start = sysdatetime();
+
+
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimCustomer', COUNT(*) FROM [CH01-01-Dimension].DimCustomer
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimGender', COUNT(*) FROM [CH01-01-Dimension].DimGender
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimMaritalStatus', COUNT(*) FROM [CH01-01-Dimension].DimMaritalStatus
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimOccupation', COUNT(*) FROM [CH01-01-Dimension].DimOccupation
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimOrderDate', COUNT(*) FROM [CH01-01-Dimension].DimOrderDate
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimProduct', COUNT(*) FROM [CH01-01-Dimension].DimProduct
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimProductCategory', COUNT(*) FROM [CH01-01-Dimension].DimProductCategory
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimProductSubcategory', COUNT(*) FROM [CH01-01-Dimension].DimProductSubcategory
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.DimTerritory', COUNT(*) FROM [CH01-01-Dimension].DimTerritory
+	select TableStatus = @TableStatus, TableName ='CH01-01-Dimension.SalesManagers', COUNT(*) FROM [CH01-01-Dimension].SalesManagers
+	select TableStatus = @TableStatus, TableName ='CH01-01-Fact.Data', COUNT(*) FROM [CH01-01-Fact].Data
+
+	select @end = sysdatetime();
+
+	    exec [Process].[usp_TrackWorkFlow]
+		@StartTime = @start,
+		@EndTime = @end,
+		@WorkFlowDescription = 'Executing ShowTableStatusRowCount',
+		@UserAuthorizationKey = @UserAuthorizationKey,
+		@WorkFlowStepTableRowCount = null
+
+END
+
+
+go
+
+--DROP ADDED
+drop procedure if exists [Process].[usp_ShowWorkflowSteps];
+go
+
+CREATE PROCEDURE [Process].[usp_ShowWorkflowSteps]
+AS
+
+    SELECT * FROM process.workflowsteps;
+
+    select DATEDIFF(second, min(StartingDateTime), max(EndingDateTime)) as TimeElapsedSeconds,  DATEDIFF(second, min(StartingDateTime), max(EndingDateTime)) / 60 as TimeElapsedMinutes
+	from Process.WorkflowSteps
+
+    select  db.GroupMemberFirstName, 
+    db.UserAuthorizationKey, 
+    count(WorkFlowStepKey) as NumProcedures, 
+    sum(datediff(millisecond, StartingDateTime, EndingDateTime)) / 1000 as executionTimeInSeconds, 
+    sum(datediff(MILLISECOND, StartingDateTime, EndingDateTime)) as executionTimeInMS
+    from process.WorkflowSteps as wfs
+    left join DbSecurity.UserAuthorization as db
+    on db.UserAuthorizationKey = wfs.UserAuthorizationKey
+    group by db.UserAuthorizationKey, db.GroupMemberFirstName
+
+GO
+
